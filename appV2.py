@@ -69,7 +69,7 @@ if uploaded_files:
 if st.button("Open Camera for 10 Seconds"):
     st.write("Opening webcam...")
 
-    cap = cv2.VideoCapture(0)
+    cap = cv2.VideoCapture(1)
     if not cap.isOpened():
         st.error("Could not open webcam")
     else:
@@ -104,3 +104,4 @@ if st.button("Open Camera for 10 Seconds"):
             st.image(annotated_path, caption="Annotated Webcam Frame")
             st.write(f"Detected currency: {currency_detected}")
             speak_currency(f"The detected currency is {currency_detected}")
+
