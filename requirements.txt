@@ -3,6 +3,7 @@ numpy==1.24.3
 pandas==1.5.3
 scikit-learn==1.2.2
 roboflow==1.1.29
+pyttsx3
 gTTS==2.3.2
 
 # Streamlit and related
