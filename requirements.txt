@@ -1,6 +1,23 @@
-streamlit==1.38.0
-pyttsx3==2.90
-Pillow==10.4.0
-opencv-python-headless==4.8.0.76
-roboflow==1.1.29
+# Core libraries
+numpy==1.24.3
+pandas==1.5.3
+scikit-learn==1.2.2
+
+# Streamlit and related
+streamlit==1.32.2
+plotly==5.15.0
+
+# For plotting & visualization
+matplotlib==3.7.2
+seaborn==0.12.2
+
+# Utilities
+scipy==1.10.1
+joblib==1.5.2
+python-dateutil==2.9.0
+pytz==2025.2
+
+# Optional for markdown, caching, etc.
+altair==5.5.0
+click==8.3.0
 
