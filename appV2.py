@@ -5,65 +5,79 @@ import io
 import tempfile
 import requests
 import os
+import base64
 
 # -------------------------------
-# STEP 1: Initialize Roboflow
+# STEP 1: Load ElevenLabs API Key
+# -------------------------------
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+
+if not ELEVENLABS_API_KEY:
+    st.error("❌ ELEVENLABS_API_KEY not found. Please add it in Streamlit Secrets.")
+    st.stop()
+else:
+    st.success("✅ ElevenLabs API key loaded successfully.")
+
+# -------------------------------
+# STEP 2: Initialize Roboflow Model
 # -------------------------------
 rf = Roboflow(api_key="2po24idSl5m93Vfr6ZtF")
 project = rf.workspace().project("indian-currency-detection-elfyf")
 model = project.version(1).model
 
 # -------------------------------
-# STEP 2: ElevenLabs TTS Function
+# STEP 3: ElevenLabs Voice Settings
 # -------------------------------
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-
-if not ELEVENLABS_API_KEY:
-    st.error("❌ ELEVENLABS_API_KEY not found in Streamlit Secrets.")
-else:
-    st.success("✅ ElevenLabs API key loaded successfully.")
-VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Default voice (Adam)
+VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Default voice ("Adam")
 
 def speak_currency(text):
-    """Play ElevenLabs TTS audio with autoplay using HTML"""
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
+    """Generate and play ElevenLabs TTS audio"""
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
 
     headers = {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Content-Type": "application/json"
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": ELEVENLABS_API_KEY
     }
 
-    data = {
+    payload = {
         "text": text,
+        "model_id": "eleven_monolingual_v1",
         "voice_settings": {
             "stability": 0.4,
             "similarity_boost": 0.8
         }
     }
 
-    response = requests.post(url, json=data, headers=headers)
+    response = requests.post(url, headers=headers, json=payload)
+
     if response.status_code == 200:
         audio_bytes = response.content
-        audio_base64 = audio_bytes.encode("base64") if hasattr(audio_bytes, "encode") else None
-        import base64
-        audio_base64 = base64.b64encode(audio_bytes).decode()
-        audio_html = f"""
-        <audio autoplay>
-            <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
-        </audio>
-        """
-        st.markdown(audio_html, unsafe_allow_html=True)
+        st.audio(audio_bytes, format="audio/mp3")
     else:
-        st.error(f"Error: ElevenLabs API returned {response.status_code}")
-
-
+        st.error(f"❌ ElevenLabs API returned {response.status_code}")
+        st.write(response.text)
 
 # -------------------------------
-# STEP 3: Streamlit App
+# STEP 4: Optional - List available voices
+# -------------------------------
+if st.button("🔍 Show available ElevenLabs voices"):
+    r = requests.get("https://api.elevenlabs.io/v1/voices",
+                     headers={"xi-api-key": ELEVENLABS_API_KEY})
+    if r.status_code == 200:
+        data = r.json()
+        for v in data["voices"]:
+            st.write(f"🎤 {v['name']} → {v['voice_id']}")
+    else:
+        st.error(f"Could not fetch voices: {r.status_code}")
+
+# -------------------------------
+# STEP 5: Streamlit App Layout
 # -------------------------------
 st.title("💵 Indian Currency Detection with ElevenLabs Voice Output")
-st.write("Upload one or more images or use the webcam to detect currency.")
+st.write("Upload one or more images or use the webcam to detect Indian currency notes.")
 
+# File uploader
 uploaded_files = st.file_uploader(
     "Choose image(s)",
     type=["png", "jpg", "jpeg", "webp"],
@@ -87,11 +101,12 @@ if uploaded_files:
         currency_detected = predictions[-1]['class'] if predictions else "Nothing"
 
         st.image(annotated_path, caption=f"Annotated: {uploaded_file.name}")
-        st.write(f"Detected currency: {currency_detected}")
+        st.write(f"💰 Detected currency: **{currency_detected}**")
         speak_currency(f"The detected currency is {currency_detected}")
 
+# Webcam capture
 st.write("---")
-st.header("Use Webcam to Detect Currency")
+st.header("📸 Use Webcam to Detect Currency")
 
 img_file = st.camera_input("Take a picture")
 if img_file is not None:
@@ -109,7 +124,5 @@ if img_file is not None:
     currency_detected = predictions[-1]['class'] if predictions else "Nothing"
 
     st.image(annotated_path, caption="Annotated Webcam Image")
-    st.write(f"Detected currency: {currency_detected}")
+    st.write(f"💰 Detected currency: **{currency_detected}**")
     speak_currency(f"The detected currency is {currency_detected}")
-
-
