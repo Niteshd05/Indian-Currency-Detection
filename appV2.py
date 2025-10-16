@@ -3,7 +3,8 @@ from roboflow import Roboflow
 from PIL import Image
 import io
 import tempfile
-import urllib.parse
+import requests
+import os
 
 # -------------------------------
 # STEP 1: Initialize Roboflow
@@ -13,26 +14,51 @@ project = rf.workspace().project("indian-currency-detection-elfyf")
 model = project.version(1).model
 
 # -------------------------------
-# STEP 2: Define browser-based TTS function
+# STEP 2: ElevenLabs TTS Function
 # -------------------------------
+ELEVENLABS_API_KEY = "sk_99ffd0ed1acb5d0961c2fa49e90ef4fb24ca9982b1bbfbdc"  # ⬅️ Replace with your real API key
+VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Default voice (Adam)
+
 def speak_currency(text):
-    """Use Google Translate TTS via HTML audio tag"""
-    text_encoded = urllib.parse.quote(text)
-    st.markdown(f"""
-    <audio autoplay>
-      <source src="https://translate.google.com/translate_tts?ie=UTF-8&q={text_encoded}&tl=en&client=tw-ob" type="audio/mpeg">
-    </audio>
-    """, unsafe_allow_html=True)
+    """Play ElevenLabs TTS audio with autoplay using HTML"""
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
+
+    headers = {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json"
+    }
+
+    data = {
+        "text": text,
+        "voice_settings": {
+            "stability": 0.4,
+            "similarity_boost": 0.8
+        }
+    }
+
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 200:
+        audio_bytes = response.content
+        audio_base64 = audio_bytes.encode("base64") if hasattr(audio_bytes, "encode") else None
+        import base64
+        audio_base64 = base64.b64encode(audio_bytes).decode()
+        audio_html = f"""
+        <audio autoplay>
+            <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+        </audio>
+        """
+        st.markdown(audio_html, unsafe_allow_html=True)
+    else:
+        st.error(f"Error: ElevenLabs API returned {response.status_code}")
+
+
 
 # -------------------------------
 # STEP 3: Streamlit App
 # -------------------------------
-st.title("Indian Currency Detection with Voice Output")
+st.title("💵 Indian Currency Detection with ElevenLabs Voice Output")
 st.write("Upload one or more images or use the webcam to detect currency.")
 
-# -------------------------------
-# File uploader for multiple images
-# -------------------------------
 uploaded_files = st.file_uploader(
     "Choose image(s)",
     type=["png", "jpg", "jpeg", "webp"],
@@ -59,9 +85,6 @@ if uploaded_files:
         st.write(f"Detected currency: {currency_detected}")
         speak_currency(f"The detected currency is {currency_detected}")
 
-# -------------------------------
-# Webcam capture using Streamlit camera_input
-# -------------------------------
 st.write("---")
 st.header("Use Webcam to Detect Currency")
 
