@@ -5,6 +5,7 @@ import io
 import tempfile
 import requests
 import os
+import base64
 from gtts import gTTS
 
 # -------------------------------
@@ -124,4 +125,5 @@ if img_file is not None:
     st.image(annotated_path, caption="Annotated Webcam Image")
     st.write(f"💰 Detected currency: **{currency_detected}**")
     speak_currency(f"The detected currency is {currency_detected}")
+
 
