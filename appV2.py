@@ -16,7 +16,12 @@ model = project.version(1).model
 # -------------------------------
 # STEP 2: ElevenLabs TTS Function
 # -------------------------------
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY") # ⬅️ Replace with your real API key
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+
+if not ELEVENLABS_API_KEY:
+    st.error("❌ ELEVENLABS_API_KEY not found in Streamlit Secrets.")
+else:
+    st.success("✅ ElevenLabs API key loaded successfully.")
 VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Default voice (Adam)
 
 def speak_currency(text):
@@ -106,4 +111,5 @@ if img_file is not None:
     st.image(annotated_path, caption="Annotated Webcam Image")
     st.write(f"Detected currency: {currency_detected}")
     speak_currency(f"The detected currency is {currency_detected}")
+
 
