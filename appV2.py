@@ -24,10 +24,11 @@ model = project.version(1).model
 # STEP 3: TTS Function with Silent Fallback
 # -------------------------------
 def speak_currency(text):
-    """Try ElevenLabs first, silently fallback to gTTS if unavailable"""
-    audio_played = False
-    if ELEVENLABS_API_KEY:
-        try:
+    """Generate audio and autoplay using HTML"""
+    try:
+        # Use ElevenLabs first if key is available
+        if ELEVENLABS_API_KEY:
+            import requests
             url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
             headers = {
                 "Accept": "audio/mpeg",
@@ -37,24 +38,32 @@ def speak_currency(text):
             payload = {
                 "text": text,
                 "model_id": "eleven_monolingual_v1",
-                "voice_settings": {
-                    "stability": 0.4,
-                    "similarity_boost": 0.8
-                }
+                "voice_settings": {"stability": 0.4, "similarity_boost": 0.8}
             }
             response = requests.post(url, headers=headers, json=payload)
             if response.status_code == 200:
-                st.audio(response.content, format="audio/mp3")
-                audio_played = True
-        except:
-            pass  # silently ignore any ElevenLabs errors
+                audio_bytes = response.content
+            else:
+                raise Exception("ElevenLabs failed")
+        else:
+            raise Exception("No ElevenLabs key")
 
-    if not audio_played:
+    except:
+        # fallback to gTTS
         tts = gTTS(text)
         audio_fp = io.BytesIO()
         tts.write_to_fp(audio_fp)
         audio_fp.seek(0)
-        st.audio(audio_fp, format="audio/mp3")
+        audio_bytes = audio_fp.read()
+
+    # Encode audio to base64 for HTML autoplay
+    audio_base64 = base64.b64encode(audio_bytes).decode()
+    audio_html = f"""
+        <audio autoplay="true">
+            <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
+        </audio>
+    """
+    st.markdown(audio_html, unsafe_allow_html=True)
 
 # -------------------------------
 # STEP 4: Streamlit UI
@@ -115,3 +124,4 @@ if img_file is not None:
     st.image(annotated_path, caption="Annotated Webcam Image")
     st.write(f"💰 Detected currency: **{currency_detected}**")
     speak_currency(f"The detected currency is {currency_detected}")
+
