@@ -3,13 +3,19 @@ numpy==1.24.3
 pandas==1.5.3
 scikit-learn==1.2.2
 roboflow==1.1.29
+
+# Text-to-Speech
+elevenlabs==1.5.0
+
+# (optional) fallback TTS engines
+gTTS==2.3.2
 pyttsx3
 
 # Streamlit and related
 streamlit==1.32.2
 plotly==5.15.0
 
-# For plotting & visualization (optional, keep if used)
+# For plotting & visualization (optional)
 matplotlib==3.7.2
 seaborn==0.12.2
 
@@ -22,4 +28,7 @@ pytz==2025.2
 # Optional for markdown, caching, etc.
 altair==5.5.0
 click==8.3.0
+
+# To handle environment variables securely
+python-dotenv==1.0.1
 
