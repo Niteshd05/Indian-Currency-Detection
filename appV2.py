@@ -5,79 +5,67 @@ import io
 import tempfile
 import requests
 import os
-import base64
+from gtts import gTTS
 
 # -------------------------------
 # STEP 1: Load ElevenLabs API Key
 # -------------------------------
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-
-if not ELEVENLABS_API_KEY:
-    st.error("❌ ELEVENLABS_API_KEY not found. Please add it in Streamlit Secrets.")
-    st.stop()
-else:
-    st.success("✅ ElevenLabs API key loaded successfully.")
+VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Default free voice ("Adam")
 
 # -------------------------------
-# STEP 2: Initialize Roboflow Model
+# STEP 2: Roboflow Model Setup
 # -------------------------------
 rf = Roboflow(api_key="2po24idSl5m93Vfr6ZtF")
 project = rf.workspace().project("indian-currency-detection-elfyf")
 model = project.version(1).model
 
 # -------------------------------
-# STEP 3: ElevenLabs Voice Settings
+# STEP 3: TTS Function with Fallback
 # -------------------------------
-VOICE_ID = "EXAVITQu4vr4xnSDxMaL"  # Default voice ("Adam")
-
 def speak_currency(text):
-    """Generate and play ElevenLabs TTS audio"""
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
+    """Try ElevenLabs first, fallback to gTTS if blocked"""
+    if ELEVENLABS_API_KEY:
+        try:
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
+            headers = {
+                "Accept": "audio/mpeg",
+                "Content-Type": "application/json",
+                "xi-api-key": ELEVENLABS_API_KEY
+            }
+            payload = {
+                "text": text,
+                "model_id": "eleven_monolingual_v1",
+                "voice_settings": {
+                    "stability": 0.4,
+                    "similarity_boost": 0.8
+                }
+            }
+            response = requests.post(url, headers=headers, json=payload)
+            if response.status_code == 200:
+                st.audio(response.content, format="audio/mp3")
+                return
+            else:
+                st.warning(f"ElevenLabs failed ({response.status_code}), using gTTS fallback.")
+        except Exception as e:
+            st.warning(f"ElevenLabs error: {e}, using gTTS fallback.")
 
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": ELEVENLABS_API_KEY
-    }
-
-    payload = {
-        "text": text,
-        "model_id": "eleven_monolingual_v1",
-        "voice_settings": {
-            "stability": 0.4,
-            "similarity_boost": 0.8
-        }
-    }
-
-    response = requests.post(url, headers=headers, json=payload)
-
-    if response.status_code == 200:
-        audio_bytes = response.content
-        st.audio(audio_bytes, format="audio/mp3")
-    else:
-        st.error(f"❌ ElevenLabs API returned {response.status_code}")
-        st.write(response.text)
-
-# -------------------------------
-# STEP 4: Optional - List available voices
-# -------------------------------
-if st.button("🔍 Show available ElevenLabs voices"):
-    r = requests.get("https://api.elevenlabs.io/v1/voices",
-                     headers={"xi-api-key": ELEVENLABS_API_KEY})
-    if r.status_code == 200:
-        data = r.json()
-        for v in data["voices"]:
-            st.write(f"🎤 {v['name']} → {v['voice_id']}")
-    else:
-        st.error(f"Could not fetch voices: {r.status_code}")
+    # Fallback to gTTS
+    tts = gTTS(text)
+    audio_fp = io.BytesIO()
+    tts.write_to_fp(audio_fp)
+    audio_fp.seek(0)
+    st.audio(audio_fp, format="audio/mp3")
 
 # -------------------------------
-# STEP 5: Streamlit App Layout
+# STEP 4: Streamlit UI
 # -------------------------------
-st.title("💵 Indian Currency Detection with ElevenLabs Voice Output")
-st.write("Upload one or more images or use the webcam to detect Indian currency notes.")
+st.title("💵 Indian Currency Detection with TTS (ElevenLabs + gTTS Fallback)")
+st.write("Upload images or use webcam to detect Indian currency.")
 
+# -------------------------------
 # File uploader
+# -------------------------------
 uploaded_files = st.file_uploader(
     "Choose image(s)",
     type=["png", "jpg", "jpeg", "webp"],
@@ -104,7 +92,9 @@ if uploaded_files:
         st.write(f"💰 Detected currency: **{currency_detected}**")
         speak_currency(f"The detected currency is {currency_detected}")
 
+# -------------------------------
 # Webcam capture
+# -------------------------------
 st.write("---")
 st.header("📸 Use Webcam to Detect Currency")
 
