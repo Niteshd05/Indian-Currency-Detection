@@ -21,10 +21,11 @@ project = rf.workspace().project("indian-currency-detection-elfyf")
 model = project.version(1).model
 
 # -------------------------------
-# STEP 3: TTS Function with Fallback
+# STEP 3: TTS Function with Silent Fallback
 # -------------------------------
 def speak_currency(text):
-    """Try ElevenLabs first, fallback to gTTS if blocked"""
+    """Try ElevenLabs first, silently fallback to gTTS if unavailable"""
+    audio_played = False
     if ELEVENLABS_API_KEY:
         try:
             url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}/stream"
@@ -44,23 +45,21 @@ def speak_currency(text):
             response = requests.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 st.audio(response.content, format="audio/mp3")
-                return
-            else:
-                st.warning(f"ElevenLabs failed ({response.status_code}), using gTTS fallback.")
-        except Exception as e:
-            st.warning(f"ElevenLabs error: {e}, using gTTS fallback.")
+                audio_played = True
+        except:
+            pass  # silently ignore any ElevenLabs errors
 
-    # Fallback to gTTS
-    tts = gTTS(text)
-    audio_fp = io.BytesIO()
-    tts.write_to_fp(audio_fp)
-    audio_fp.seek(0)
-    st.audio(audio_fp, format="audio/mp3")
+    if not audio_played:
+        tts = gTTS(text)
+        audio_fp = io.BytesIO()
+        tts.write_to_fp(audio_fp)
+        audio_fp.seek(0)
+        st.audio(audio_fp, format="audio/mp3")
 
 # -------------------------------
 # STEP 4: Streamlit UI
 # -------------------------------
-st.title("💵 Indian Currency Detection with TTS (ElevenLabs + gTTS Fallback)")
+st.title("💵 Indian Currency Detection with TTS")
 st.write("Upload images or use webcam to detect Indian currency.")
 
 # -------------------------------
