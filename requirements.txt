@@ -27,8 +27,7 @@ pytz==2025.2
 
 # Optional for markdown, caching, etc.
 altair==5.5.0
-click==8.3.0
+click==8.1.7   # ✅ Compatible with gTTS
 
 # To handle environment variables securely
 python-dotenv==1.0.1
-
